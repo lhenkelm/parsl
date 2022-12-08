@@ -3,6 +3,8 @@ from typing import Optional
 import zmq
 
 VALID_VERSIONS = {'IPv4', 'IPv6'}
+DEFAULT_IP_VERSION = 'IPv6'
+assert DEFAULT_IP_VERSION in VALID_VERSIONS
 
 def is_ipv6(address : str) -> bool:
   return ':' in address
@@ -58,7 +60,7 @@ def consistent_ip_version(addresses : str, *, suggest : Optional[str] = None) ->
   assert _canonical_version_is_valid(version)
   return version
 
-def default_context(*args, ip_version : str = 'IPv6', **kwargs) -> zqm.Context:
+def context(*args, ip_version : str = 'IPv6', **kwargs) -> zqm.Context:
   """
   0MQ Context factory that enables IPv6 by default.
   """
@@ -66,3 +68,23 @@ def default_context(*args, ip_version : str = 'IPv6', **kwargs) -> zqm.Context:
   if canonical_version(ip_version) == 'IPv6':
     context.setsockopt(zmq.IPV6, 1)
   return context
+
+def socket(ip_version: str = 'IPv6', *args, **kwargs) -> socket.socket:
+  if canonical_version(ip_version) == 'IPv6':
+    socket_family = socket.AF_INET6
+  else:
+    socket_family = socket.AF_INET
+  return socket.socket(socket_family, *args, **kwargs)
+
+def loopback_address(ip_version : str = 'IPv6') -> str:
+  if canonical_version(ip_version) == 'IPv6':
+    return '::1'
+  else:
+    return '127.0.0.1'
+
+def any_address(ip_version : str = 'IPv6') -> str:
+  if canonical_version(ip_version) == 'IPv6':
+    return '::'
+  else:
+    return '0.0.0.0'
+  
