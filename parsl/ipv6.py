@@ -1,6 +1,7 @@
 from typing import Optional
 
 import zmq
+import socket
 
 VALID_VERSIONS = {'IPv4', 'IPv6'}
 DEFAULT_IP_VERSION = 'IPv6'
