@@ -15,6 +15,7 @@ from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
+import parsl.ipv6 as ipv6
 
 from parsl.serialize import deserialize
 
@@ -78,7 +79,7 @@ class MonitoringHub(RepresentationMixin):
                  hub_port: Optional[int] = None,
                  hub_port_range: Tuple[int, int] = (55050, 56000),
 
-                 client_address: str = "127.0.0.1",
+                 client_address: Optional[str] = None,
                  client_port_range: Tuple[int, int] = (55000, 56000),
 
                  workflow_name: Optional[str] = None,
@@ -106,7 +107,7 @@ class MonitoringHub(RepresentationMixin):
              Note that despite the similar name, this is not related to hub_port.
              Default: (55050, 56000)
         client_address : str
-             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
+             The ip address at which the dfk will be able to reach Hub. Default: loopback
         client_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
              Default: (55000, 56000)
@@ -141,10 +142,15 @@ class MonitoringHub(RepresentationMixin):
         if _db_manager_excepts:
             raise(_db_manager_excepts)
 
-        self.client_address = client_address
+        self.hub_address = hub_address
+        _addresses = self.hub_address
+        if client_address:
+          _addresses += f',{client_address}'
+        self.ip_version = ipv6.consistent_ip_version(_addresses)
+        
+        self.client_address = client_address or ipv6.loopback_address(self.ip_version)
         self.client_port_range = client_port_range
 
-        self.hub_address = hub_address
         self.hub_port = hub_port
         self.hub_port_range = hub_port_range
 
@@ -223,15 +229,20 @@ class MonitoringHub(RepresentationMixin):
 
         udp_port, ic_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
-
-        context = zmq.Context()
+        if ipv6.is_ipv6(self.hub_address):
+          self.monitoring_hub_url = "udp://[{}]:{}".format(self.hub_address, udp_port)
+          _dfk_url = "tcp://[{}]:{}".format(self.hub_address, ic_port)
+        else:
+          self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+          _dfk_url = "tcp://{}:{}".format(self.hub_address, ic_port)
+        
+        context = ipv6.context(self.ip_version)
         self.dfk_channel_timeout = 10000  # in milliseconds
         self._dfk_channel = context.socket(zmq.DEALER)
         self._dfk_channel.setsockopt(zmq.LINGER, 0)
         self._dfk_channel.set_hwm(0)
         self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
-        self._dfk_channel.connect("tcp://{}:{}".format(self.hub_address, ic_port))
+        self._dfk_channel.connect(_dfk_url)
 
         self.logger.info("Monitoring Hub initialized")
 
@@ -346,7 +357,7 @@ class MonitoringRouter:
                  hub_port: Optional[int] = None,
                  hub_port_range: Tuple[int, int] = (55050, 56000),
 
-                 monitoring_hub_address: str = "127.0.0.1",
+                 monitoring_hub_address: Optional[str] = None, # unused??
                  logdir: str = ".",
                  run_id: str,
                  logging_level: int = logging.INFO,
@@ -378,27 +389,30 @@ class MonitoringRouter:
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address
+        self.ip_version = ipv6.consistent_ip_version(self.hub_address)
+        
         self.atexit_timeout = atexit_timeout
         self.run_id = run_id
 
         self.loop_freq = 10.0  # milliseconds
 
         # Initialize the UDP socket
-        self.sock = socket.socket(socket.AF_INET,
-                                  socket.SOCK_DGRAM,
-                                  socket.IPPROTO_UDP)
+        self.sock = ipv6.socket(self.ip_version,
+                                socket.SOCK_DGRAM,
+                                socket.IPPROTO_UDP)
 
-        # We are trying to bind to all interfaces with 0.0.0.0
+        inaddr_any = ipv6.any_address(self.ip_version)
+        # We are trying to bind to all interfaces
         if not hub_port:
-            self.sock.bind(('0.0.0.0', 0))
+            self.sock.bind((inaddr_any, 0))
             self.hub_port = self.sock.getsockname()[1]
         else:
             self.hub_port = hub_port
-            self.sock.bind(('0.0.0.0', self.hub_port))
+            self.sock.bind((inaddr_any, self.hub_port))
         self.sock.settimeout(self.loop_freq / 1000)
-        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
+        self.logger.info("Initialized the UDP socket on {}:{}".format(inaddr_any,self.hub_port))
 
-        self._context = zmq.Context()
+        self._context = ipv6.context(ip_version)
         self.ic_channel = self._context.socket(zmq.DEALER)
         self.ic_channel.setsockopt(zmq.LINGER, 0)
         self.ic_channel.set_hwm(0)
