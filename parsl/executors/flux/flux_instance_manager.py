@@ -8,6 +8,7 @@ from socket import gethostname, gethostbyname
 
 import zmq
 
+import parsl.ipv6 as ipv6
 
 def main():
     """Run a Flux instance to completion.
@@ -27,7 +28,7 @@ def main():
     parser.add_argument("hostname", help="hostname of the parent executor's socket")
     parser.add_argument("port", help="Port of the parent executor's socket")
     args = parser.parse_args()
-    context = zmq.Context()
+    context = ipv6.context()
     socket = context.socket(zmq.REQ)
     socket.connect(
         args.protocol + "://" + gethostbyname(args.hostname) + ":" + args.port

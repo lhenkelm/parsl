@@ -17,6 +17,7 @@ import weakref
 
 import zmq
 
+import parsl.ipv6 as ipv6
 from parsl.utils import RepresentationMixin
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
@@ -204,7 +205,7 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 raise EnvironmentError("Cannot find Flux installation in PATH")
         self.flux_path = os.path.abspath(flux_path)
         self._task_id_counter = itertools.count()
-        self._socket = zmq.Context().socket(zmq.REP)
+        self._socket = ipv6.context().socket(zmq.REP)
         if launch_cmd is None:
             self.launch_cmd = self.DEFAULT_LAUNCH_CMD
         self._submission_queue: queue.Queue = queue.Queue()
