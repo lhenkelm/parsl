@@ -4,12 +4,14 @@ import logging
 import zmq
 # import time
 
+import parsl.ipv6 as ipv6
+
 
 class Interchange(object):
     """ TODO: docstring """
 
     def __init__(self,
-                 client_address="127.0.0.1",
+                 client_address=None,
                  client_ports=(50055, 50056),
                  worker_port=None,
                  worker_port_range=(54000, 55000)
@@ -18,15 +20,17 @@ class Interchange(object):
         start_file_logger("interchange.log")
         logger.info("Init Interchange")
 
-        self.context = zmq.Context()
+        self.ip_version = ipv6.ip_version_from_optional([client_address])
+        client_address = client_address or ipv6.loopback_address(self.ip_version)
+        self.context = ipv6.context(self.ip_version)
         self.task_incoming = self.context.socket(zmq.ROUTER)
         self.result_outgoing = self.context.socket(zmq.DEALER)
         self.worker_messages = self.context.socket(zmq.DEALER)
 
         self.result_outgoing.set_hwm(0)
 
-        task_address = "tcp://{}:{}".format(client_address, client_ports[0])
-        result_address = "tcp://{}:{}".format(client_address, client_ports[1])
+        task_address = ipv6.tcp_address(client_address, client_ports[0], ip_version=self.ip_version)
+        result_address = ipv6.tcp_address(client_address, client_ports[1], ip_version=self.ip_version)
         self.task_incoming.connect(task_address)
         self.result_outgoing.connect(result_address)
 
