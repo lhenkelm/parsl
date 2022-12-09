@@ -14,6 +14,7 @@ from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessa
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
+import parsl.ipv6 as ipv6
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
                  label='LowLatencyExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 address="127.0.0.1",
+                 address=None,
                  worker_port=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
@@ -54,7 +55,8 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
         self.workers_per_node = workers_per_node
 
         self._task_counter = 0
-        self.address = address
+        self.ip_version = ipv6.ip_version_from_optional([address])
+        self.address = address or ipv6.loopback_address(self.ip_version)
         self.worker_port = worker_port
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
@@ -68,9 +70,9 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
         """Create the Interchange process and connect to it.
         """
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            "127.0.0.1", self.interchange_port_range)
+            ipv6.loopback_address(self.ip_version), self.interchange_port_range)
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            "127.0.0.1", self.interchange_port_range)
+            ipv6.loopback_address(self.ip_version), self.interchange_port_range)
 
         self.is_alive = True
 
@@ -134,7 +136,7 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
                 "Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
-        self.worker_task_url = "tcp://{}:{}".format(
+        self.worker_task_url = ipv6.tcp_url(
             self.address, worker_port)
 
     def _start_queue_management_thread(self):
