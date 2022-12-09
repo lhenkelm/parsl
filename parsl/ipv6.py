@@ -1,4 +1,4 @@
-from typing import Union, Optional, Sequence
+from typing import Union, Optional, Sequence, Tuple
 
 import zmq
 import socket
@@ -138,3 +138,24 @@ def tcp_url(*args, **kwargs) -> str:
 
 def udp_url(*args, **kwargs) -> str:
   return url('udp', *args, **kwargs)
+
+def split_url(url : str) -> Tuple[str, str, Union[str, None]]:
+  """
+  Split a URL into protocol, address and port.
+  
+  If the URL does not contain a port, the 3rd returned value is None.
+  """
+  protocol, _, remainder = url.partition('://')
+  if remainder.startswith('['):
+    remainder = remainder.lstrip('[')
+    address, _, port = remainder.partition(']:')
+    assert is_ipv6(address)
+  else:
+    address, _, port = remainder.partition(':')
+    assert is_ipv4(address)
+  port = port or None
+  return protocol, address, port
+  
+def ip_version_from_urls(urls : Sequence[Union[str, None]]) -> str:
+  addresses = [split_url(url)[1] for url in urls if url is not None]
+  return ip_version_from_optional(addresses)
