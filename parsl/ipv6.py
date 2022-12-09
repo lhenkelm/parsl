@@ -78,7 +78,7 @@ def ip_version_from_optional(addresses : Sequence[Union[str, None]]) -> str:
     return DEFAULT_IP_VERSION
 
 
-def context(*args, ip_version : str = 'IPv6', **kwargs) -> zqm.Context:
+def context(*args, ip_version : str = 'IPv6', **kwargs) -> zmq.Context:
   """
   0MQ Context factory that enables IPv6 by default.
   """

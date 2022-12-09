@@ -97,7 +97,7 @@ class TasksOutgoing(object):
            Port range for the comms between client and interchange
 
         """
-        self.ip_version = ipv6.consistent_ip_version(ip_addresss)
+        self.ip_version = ipv6.consistent_ip_version(ip_address)
         self.context = ipv6.context(self.ip_version)
         self.zmq_socket = self.context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)

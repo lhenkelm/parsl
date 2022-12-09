@@ -73,11 +73,11 @@ def address_by_query(timeout: float = 30) -> str:
     response = requests.get('https://api64.ipify.org', timeout=timeout)
 
     if response.status_code == 200:
-        ipv4_addr, _, ipv6_adr = response.text.partition(' or ')
+        ipv4_addr, _, ipv6_addr = response.text.partition(' or ')
         if ipv6.DEFAULT_IP_VERSION == 'IPv6':
-            addr = ipv6_adr
+            addr = ipv6_addr
         else:
-            addr = ip4_adr
+            addr = ipv4_addr
         logger.debug("Address found: {}".format(addr))
         return addr
     else:

@@ -234,7 +234,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             self.all_addresses = address
         else:
             self.all_addresses = ','.join(get_all_addresses())
-        self.ip_version = ipv6.consistent_ip_version(all_addresses)
+        self.ip_version = ipv6.consistent_ip_version(self.all_addresses)
         
 
         mem_slots = max_workers

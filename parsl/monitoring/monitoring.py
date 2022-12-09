@@ -404,7 +404,7 @@ class MonitoringRouter:
         self.sock.settimeout(self.loop_freq / 1000)
         self.logger.info("Initialized the UDP socket on {}:{}".format(inaddr_any,self.hub_port))
 
-        self._context = ipv6.context(ip_version)
+        self._context = ipv6.context(self.ip_version)
         self.ic_channel = self._context.socket(zmq.DEALER)
         self.ic_channel.setsockopt(zmq.LINGER, 0)
         self.ic_channel.set_hwm(0)
