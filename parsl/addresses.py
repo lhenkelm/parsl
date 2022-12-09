@@ -74,16 +74,23 @@ def address_by_query(timeout: float = 30) -> str:
           Timeout for the request in seconds. Default: 30s
     """
     logger.debug("Finding address by querying remote service")
-    response = requests.get('https://api64.ipify.org', timeout=timeout)
+    if ipv6.DEFAULT_IP_VERSION == 'IPv6':
+      url = 'https://api64.ipify.org'
+    else:
+      url = 'https://api.ipify.org'
+    response = requests.get(url, timeout=timeout)
 
     if response.status_code == 200:
-        ipv4_addr, _, ipv6_addr = response.text.partition(' or ')
-        assert ipv6.is_ipv4(ipv4_addr), f'{ipv4_addr=!r}'
-        assert ipv6.is_ipv6(ipv6_addr), f'{ipv6_addr=!r}'
-        if ipv6.DEFAULT_IP_VERSION == 'IPv6':
-            addr = ipv6_addr
+        if 'or' in response.text:
+          ipv4_addr, _, ipv6_addr = response.text.partition(' or ')
+          assert ipv6.is_ipv4(ipv4_addr), f'{ipv4_addr=!r}, {response.text=!r}'
+          assert ipv6.is_ipv6(ipv6_addr), f'{ipv6_addr=!r}, {response.text=!r}'
+          if ipv6.DEFAULT_IP_VERSION == 'IPv6':
+              addr = ipv6_addr
+          else:
+              addr = ipv4_addr
         else:
-            addr = ipv4_addr
+          addr=response.text
         logger.debug("Address found: {}".format(addr))
         return addr
     else:
