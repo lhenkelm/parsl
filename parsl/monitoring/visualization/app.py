@@ -3,6 +3,7 @@ from parsl.monitoring.visualization.models import db
 import argparse
 import os
 
+import parsl.ipv6 as ipv6
 
 def cli_run():
     """ Instantiates the Monitoring viz server
@@ -14,8 +15,12 @@ def cli_run():
                         help='Port at which the monitoring Viz Server is hosted. Default: 8080')
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Enable debug logging")
-    parser.add_argument("-l", "--listen", type=str, default="127.0.0.1", metavar="ADDRESS",
-                        help="Choose address to listen for connections on. Default: 127.0.0.1. Choose 0.0.0.0 to listen on all addresses.")
+    parser.add_argument("-l", "--listen", type=str, default=ipv6.loopback_address(), metavar="ADDRESS",
+                        help=(
+                          f"Choose address to listen for connections on. Default: {ipv6.loopback_address()}. "
+                          f"Choose {ipv6.any_address()} to listen on all addresses."
+                        ),
+    )
     args = parser.parse_args()
 
     app = Flask(__name__)
