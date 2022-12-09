@@ -15,6 +15,7 @@ from parsl.executors.high_throughput.executor import HighThroughputExecutor
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
+import parsl.ipv6 as ipv6
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  label='ExtremeScaleExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 address="127.0.0.1",
+                 address=None,
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
@@ -134,7 +135,8 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  managed=True):
-
+        ip_version = ipv6.ip_version_from_optional([address])
+        address = address or ipv6.loopback_address(ip_version)
         super().__init__(label=label,
                          provider=provider,
                          launch_cmd=launch_cmd,
@@ -148,7 +150,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          heartbeat_threshold=heartbeat_threshold,
                          heartbeat_period=heartbeat_period,
                          managed=managed)
-
+        assert self.ip_version == ip_version, f'{self.ip_version=!r}, {ip_version=!r}'
         self.ranks_per_node = ranks_per_node
 
         logger.debug("Initializing ExtremeScaleExecutor")
@@ -176,10 +178,12 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
         debug_opts = "--debug" if self.worker_debug else ""
         l_cmd = self.launch_cmd.format(debug=debug_opts,
-                                       task_url="tcp://{}:{}".format(self.address,
-                                                                     self.worker_task_port),
-                                       result_url="tcp://{}:{}".format(self.address,
-                                                                       self.worker_result_port),
+                                       task_url=ipv6.tcp_url(self.address,
+                                                             self.worker_task_port,
+                                                             ip_version=self.ip_version),
+                                       result_url=ipv6.tcp_url(self.address,
+                                                               self.worker_result_port,
+                                                               ip_version=self.ip_version),
                                        cores_per_worker=self.cores_per_worker,
                                        # This is here only to support the exex mpiexec call
                                        ranks_per_node=self.ranks_per_node,
