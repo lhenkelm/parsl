@@ -21,6 +21,8 @@ import multiprocessing
 
 from parsl.process_loggers import wrap_with_logs
 
+import parsl.ipv6 as ipv6
+
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
@@ -52,7 +54,7 @@ class Manager(object):
 
     """
     def __init__(self,
-                 addresses="127.0.0.1",
+                 addresses=None,
                  address_probe_timeout=30,
                  task_port="50097",
                  result_port="50098",
@@ -131,23 +133,24 @@ class Manager(object):
         """
 
         logger.info("Manager started")
-
+        self.ip_version = ipv6.ip_version_from_optional([addresses])
+        addresses = addresses or ipv6.loopback_address(self.ip_version)
         try:
             ix_address = probe_addresses(addresses.split(','), task_port, timeout=address_probe_timeout)
             if not ix_address:
                 raise Exception("No viable address found")
             else:
                 logger.info("Connection to Interchange successful on {}".format(ix_address))
-                task_q_url = "tcp://{}:{}".format(ix_address, task_port)
-                result_q_url = "tcp://{}:{}".format(ix_address, result_port)
+                task_q_url = ipv6.tcp_url(ix_address, task_port)
+                result_q_url = ipv6.tcp_url(ix_address, result_port)
                 logger.info("Task url : {}".format(task_q_url))
                 logger.info("Result url : {}".format(result_q_url))
         except Exception:
             logger.exception("Caught exception while trying to determine viable address to interchange")
             print("Failed to find a viable address to connect to interchange. Exiting")
             exit(5)
-
-        self.context = zmq.Context()
+        
+        self.context = ipv6.context(self.ip_version)
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         # Linger is set to 0, so that the manager can exit even when there might be
