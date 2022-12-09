@@ -52,7 +52,7 @@ def execute_task(f, args, kwargs, user_ns):
 def dealer_worker(worker_id, ip=None, port=5560):
     ip_version = ipv6.ip_version_from_optional([ip])
     ip = ip or ipv6.loopback_address(ip_version)
-    context = ipv6.context(ip_version) 
+    context = ipv6.context(ip_version)
     socket = context.socket(zmq.REP)
     socket.connect(ipv6.tcp_url(ip, port))
     print("Starting worker {}".format(worker_id))

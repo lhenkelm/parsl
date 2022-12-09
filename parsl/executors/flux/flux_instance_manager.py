@@ -10,6 +10,7 @@ import zmq
 
 import parsl.ipv6 as ipv6
 
+
 def main():
     """Run a Flux instance to completion.
 

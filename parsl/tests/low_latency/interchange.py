@@ -16,7 +16,7 @@ def dealer_interchange(manager_ip=None, manager_port=5559,
                        worker_port=5560):
     ip_version = ipv6.ip_version_from_optional([manager_ip])
     manager_ip = manager_ip or ipv6.loopback_address(ip_version)
-    context = ipv6.context(ip_version) 
+    context = ipv6.context(ip_version)
     incoming = context.socket(zmq.ROUTER)
     outgoing = context.socket(zmq.DEALER)
 

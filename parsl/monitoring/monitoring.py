@@ -21,11 +21,9 @@ from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
-from typing import cast, Any, Callable, Dict, List, Optional, Union
+from typing import cast, Any, Callable, Dict, List, Tuple, Optional, Union
 
 _db_manager_excepts: Optional[Exception]
-
-from typing import Optional, Tuple
 
 
 try:
@@ -143,8 +141,8 @@ class MonitoringHub(RepresentationMixin):
             raise(_db_manager_excepts)
 
         self.hub_address = hub_address
-        
-        self.ip_version = ipv6.ip_version_from_optional([self.hub_address, client_address]) 
+
+        self.ip_version = ipv6.ip_version_from_optional([self.hub_address, client_address])
         self.client_address = client_address or ipv6.loopback_address(self.ip_version)
         self.client_port_range = client_port_range
 
@@ -188,10 +186,10 @@ class MonitoringHub(RepresentationMixin):
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                "run_id": run_id
-                                       },
+                                               },
                                        name="Monitoring-Router-Process",
                                        daemon=True,
-        )
+                                       )
         self.router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
@@ -199,10 +197,10 @@ class MonitoringHub(RepresentationMixin):
                                     kwargs={"logdir": self.logdir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
-                                    },
+                                            },
                                     name="Monitoring-DBM-Process",
                                     daemon=True,
-        )
+                                    )
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
@@ -210,7 +208,7 @@ class MonitoringHub(RepresentationMixin):
                                        args=(self.logdir, self.resource_msgs, run_dir),
                                        name="Monitoring-Filesystem-Process",
                                        daemon=True
-        )
+                                       )
         self.filesystem_proc.start()
         self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
@@ -225,7 +223,6 @@ class MonitoringHub(RepresentationMixin):
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
         udp_port, ic_port = comm_q_result
-
 
         self.monitoring_hub_url = ipv6.udp_url(self.hub_address, udp_port, ip_version=self.ip_version)
         context = ipv6.context(self.ip_version)
@@ -265,7 +262,7 @@ class MonitoringHub(RepresentationMixin):
             if exception_msgs:
                 for exception_msg in exception_msgs:
                     self.logger.error("{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(exception_msg[0],
-                                      exception_msg[1]))
+                                                                                                                                        exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()
@@ -349,12 +346,12 @@ class MonitoringRouter:
                  hub_port: Optional[int] = None,
                  hub_port_range: Tuple[int, int] = (55050, 56000),
 
-                 monitoring_hub_address: Optional[str] = None, # unused??
+                 monitoring_hub_address: Optional[str] = None,  # unused??
                  logdir: str = ".",
                  run_id: str,
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3    # in seconds
-                ):
+                 ):
         """ Initializes a monitoring configuration class.
 
         Parameters
@@ -382,7 +379,7 @@ class MonitoringRouter:
 
         self.hub_address = hub_address
         self.ip_version = ipv6.consistent_ip_version(self.hub_address)
-        
+
         self.atexit_timeout = atexit_timeout
         self.run_id = run_id
 
@@ -402,7 +399,7 @@ class MonitoringRouter:
             self.hub_port = hub_port
             self.sock.bind((inaddr_any, self.hub_port))
         self.sock.settimeout(self.loop_freq / 1000)
-        self.logger.info("Initialized the UDP socket on {}:{}".format(inaddr_any,self.hub_port))
+        self.logger.info("Initialized the UDP socket on {}:{}".format(inaddr_any, self.hub_port))
 
         self._context = ipv6.context(self.ip_version)
         self.ic_channel = self._context.socket(zmq.DEALER)

@@ -64,18 +64,18 @@ class Manager(object):
 
         self.ip_version = ipv6.ip_version_from_urls([task_q_url, result_q_url])
         task_q_url = (
-            task_q_url 
-            or ipv6.tcp_url(
-                address=ipv6.loopback_address(self.ip_version), 
-                port=50097, 
+            task_q_url or
+            ipv6.tcp_url(
+                address=ipv6.loopback_address(self.ip_version),
+                port=50097,
                 ip_version=self.ip_version,
             )
         )
         result_q_url = (
-            result_q_url 
-            or ipv6.tcp_url(
-                address=ipv6.loopback_address(self.ip_version), 
-                port=50098, 
+            result_q_url or
+            ipv6.tcp_url(
+                address=ipv6.loopback_address(self.ip_version),
+                port=50098,
                 ip_version=self.ip_version,
             )
         )

@@ -5,6 +5,7 @@ import os
 
 import parsl.ipv6 as ipv6
 
+
 def cli_run():
     """ Instantiates the Monitoring viz server
     """

@@ -25,13 +25,15 @@ import parsl.ipv6 as ipv6
 
 logger = logging.getLogger(__name__)
 
+
 @lru_cache
-def address_by_interface_ipv6(*,hostname=None, port=22):
+def address_by_interface_ipv6(*, hostname=None, port=22):
     if hostname is None:
         hostname = socket.gethostname()
     all_the_interfaces = socket.getaddrinfo(hostname, port, socket.AF_INET6)
-    ipv6_address = next(ip for *_,(ip, *_) in all_the_interfaces)
+    ipv6_address = next(ip for *_, (ip, *_) in all_the_interfaces)
     return ipv6_address
+
 
 def address_by_route() -> str:
     """Finds an address for the local host by querying the local routing table
@@ -45,20 +47,20 @@ def address_by_route() -> str:
     # original author unknown
     import socket
     if ipv6.DEFAULT_IP_VERSION == 'IPv6':
-      ipv = socket.AF_INET6
-      google_dns_ip = '2001:4860:4860::8888'
+        ipv = socket.AF_INET6
+        google_dns_ip = '2001:4860:4860::8888'
     else:
-      ipv = socket.AF_INET
-      google_dns_ip = '8.8.8.8'
+        ipv = socket.AF_INET
+        google_dns_ip = '8.8.8.8'
     s = socket.socket(ipv, socket.SOCK_DGRAM)
     s.connect((google_dns_ip, 80))
     addr = s.getsockname()[0]
     s.close()
     logger.debug("Address found: {}".format(addr))
     if ipv6.DEFAULT_IP_VERSION == 'IPv6':
-      assert ipv6.is_ipv6(addr), f'{addr=!r}'
+        assert ipv6.is_ipv6(addr), f'{addr=!r}'
     else:
-      assert ipv6.is_ipv4(addr), f'{addr=!r}'
+        assert ipv6.is_ipv4(addr), f'{addr=!r}'
     return addr
 
 
@@ -75,22 +77,22 @@ def address_by_query(timeout: float = 30) -> str:
     """
     logger.debug("Finding address by querying remote service")
     if ipv6.DEFAULT_IP_VERSION == 'IPv6':
-      url = 'https://api64.ipify.org'
+        url = 'https://api64.ipify.org'
     else:
-      url = 'https://api.ipify.org'
+        url = 'https://api.ipify.org'
     response = requests.get(url, timeout=timeout)
 
     if response.status_code == 200:
         if 'or' in response.text:
-          ipv4_addr, _, ipv6_addr = response.text.partition(' or ')
-          assert ipv6.is_ipv4(ipv4_addr), f'{ipv4_addr=!r}, {response.text=!r}'
-          assert ipv6.is_ipv6(ipv6_addr), f'{ipv6_addr=!r}, {response.text=!r}'
-          if ipv6.DEFAULT_IP_VERSION == 'IPv6':
-              addr = ipv6_addr
-          else:
-              addr = ipv4_addr
+            ipv4_addr, _, ipv6_addr = response.text.partition(' or ')
+            assert ipv6.is_ipv4(ipv4_addr), f'{ipv4_addr=!r}, {response.text=!r}'
+            assert ipv6.is_ipv6(ipv6_addr), f'{ipv6_addr=!r}, {response.text=!r}'
+            if ipv6.DEFAULT_IP_VERSION == 'IPv6':
+                addr = ipv6_addr
+            else:
+                addr = ipv4_addr
         else:
-          addr=response.text
+            addr = response.text
         logger.debug("Address found: {}".format(addr))
         return addr
     else:

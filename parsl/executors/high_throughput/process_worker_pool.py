@@ -149,7 +149,7 @@ class Manager(object):
             logger.exception("Caught exception while trying to determine viable address to interchange")
             print("Failed to find a viable address to connect to interchange. Exiting")
             exit(5)
-        
+
         self.context = ipv6.context(self.ip_version)
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
