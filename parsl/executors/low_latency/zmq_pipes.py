@@ -3,6 +3,8 @@
 import zmq
 import logging
 
+import parsl.ipv6 as ipv6
+
 logger = logging.getLogger(__name__)
 
 
@@ -11,10 +13,11 @@ class TasksOutgoing(object):
 
     def __init__(self, ip_address, port_range):
         """ TODO: docstring """
-        self.context = zmq.Context()
+        self.ip_version = ipv6.consistent_ip_version(ip_address)
+        self.context = ipv6.context(self.ip_version)
         self.zmq_socket = self.context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
-        self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
+        self.port = self.zmq_socket.bind_to_random_port(ipv6.tcp_url(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
         self.poller = zmq.Poller()
@@ -38,11 +41,12 @@ class ResultsIncoming(object):
 
     def __init__(self, ip_address, port_range):
         """ TODO: docstring """
-        self.context = zmq.Context()
+        self.ip_version = ipv6.consistent_ip_version(ip_address)
+        self.context = ipv6.context(self.ip_version)
         self.zmq_socket = self.context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
         self.port = self.zmq_socket.bind_to_random_port(
-            "tcp://{}".format(ip_address),
+            ipv6.tcp_url(ip_address),
             min_port=port_range[0],
             max_port=port_range[1])
 
@@ -62,7 +66,8 @@ class WorkerMessages(object):
     """ TODO: docstring """
 
     def __init__(self, tasks_url):
-        self.context = zmq.Context()
+        self.ip_version = ipv6.ip_version_from_urls([tasks_url])
+        self.context = ipv6.context(self.ip_version)
         self.zmq_socket = self.context.socket(zmq.REP)
         self.zmq_socket.connect(tasks_url)
 
