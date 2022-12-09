@@ -234,7 +234,7 @@ class MonitoringHub(RepresentationMixin):
         self._dfk_channel.setsockopt(zmq.LINGER, 0)
         self._dfk_channel.set_hwm(0)
         self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
-        self._dfk_channel.connect(ipv6.tcp_url(self.hub_address, ic_port, self.ip_version))
+        self._dfk_channel.connect(ipv6.tcp_url(self.hub_address, ic_port, ip_version=self.ip_version))
 
         self.logger.info("Monitoring Hub initialized")
 
