@@ -15,6 +15,7 @@ import json
 
 from typing import cast, Any, Dict, Set
 
+import parsl.ipv6 as ipv6
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.serialize import serialize as serialize_object
@@ -72,8 +73,8 @@ class Interchange(object):
     TODO: We most likely need a PUB channel to send out global commands, like shutdown
     """
     def __init__(self,
-                 client_address="127.0.0.1",
-                 interchange_address="127.0.0.1",
+                 client_address=None,
+                 interchange_address=None,
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
@@ -88,10 +89,10 @@ class Interchange(object):
         Parameters
         ----------
         client_address : str
-             The ip address at which the parsl client can be reached. Default: "127.0.0.1"
+             The ip address at which the parsl client can be reached. Default: loopback
 
         interchange_address : str
-             The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
+             The ip address at which the workers will be able to reach the Interchange. Default: loopback
 
         client_ports : triple(int, int, int)
              The ports at which the client can be reached
@@ -131,22 +132,23 @@ class Interchange(object):
         logger.propagate = False
         logger.debug("Initializing Interchange process")
 
-        self.client_address = client_address
-        self.interchange_address = interchange_address
+        self.ip_version = ipv6.ip_version_from_optional([client_address, hub_address])
+        self.client_address = client_address or ipv6.loopback_address(self.ip_version)
+        self.interchange_address = interchange_address or ipv6.loopback_address(self.ip_version)
         self.poll_period = poll_period
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
             client_address, client_ports[0], client_ports[1], client_ports[2]))
-        self.context = zmq.Context()
+        self.context = ipv6.context(self.ip_version)
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+        self.task_incoming.connect(ipv6.tcp_url(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
-        self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
+        self.results_outgoing.connect(ipv6.tcp_url(client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
-        self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
+        self.command_channel.connect(ipv6.tcp_url(client_address, client_ports[2]))
         logger.info("Connected to client")
 
         self.hub_address = hub_address
@@ -245,7 +247,7 @@ class Interchange(object):
             logger.info("Connecting to monitoring")
             hub_channel = self.context.socket(zmq.DEALER)
             hub_channel.set_hwm(0)
-            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
+            hub_channel.connect(ipv6.tcp_url(self.hub_address, self.hub_port))
             logger.info("Monitoring enabled and connected to hub")
             return hub_channel
         else:
