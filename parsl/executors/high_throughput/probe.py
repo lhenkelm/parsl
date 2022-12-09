@@ -6,6 +6,8 @@ import logging
 from parsl.addresses import get_all_addresses
 from zmq.utils.monitor import recv_monitor_message
 
+import parsl.ipv6 as ipv6
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,12 +27,13 @@ def probe_addresses(addresses, task_port, timeout=120):
     -------
     None or string address
     """
-    context = zmq.Context()
+    ip_version = ipv6.consistent_ip_version(addresses)
+    context = ipv6.context(ip_version)
     addr_map = {}
     for addr in addresses:
         socket = context.socket(zmq.DEALER)
         socket.setsockopt(zmq.LINGER, 0)
-        url = "tcp://{}:{}".format(addr, task_port)
+        url = ipv6.tcp_url(addr, task_port, ip_version=ip_version)
         logger.debug("Trying to connect back on {}".format(url))
         socket.connect(url)
         addr_map[addr] = {'sock': socket,
@@ -60,7 +63,8 @@ class TestWorker(object):
 
     def __init__(self, addresses, port):
         uid = str(uuid.uuid4())
-        self.context = zmq.Context()
+        self.ip_version = ipv6.consistent_ip_version(addresses)
+        self.context = ipv6.context(self.ip_version)
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         # Linger is set to 0, so that the manager can exit even when there might be
@@ -69,7 +73,7 @@ class TestWorker(object):
 
         address = probe_addresses(addresses, port)
         print("Viable address :", address)
-        self.task_incoming.connect("tcp://{}:{}".format(address, port))
+        self.task_incoming.connect(ipv6.tcp_url(address, port, ip_version=self.ip_version))
         print("Here")
 
     def heartbeat(self):
