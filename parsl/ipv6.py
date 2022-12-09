@@ -60,10 +60,10 @@ def consistent_ip_version(addresses : str, *, suggest : Optional[str] = None) ->
   
   if version == 'IPv6':
     if any(is_ipv4(addr) for addr in addresses.split(',')):
-      raise ValueError(f'not all addresses are valid for IPv6: {addresses=!r}')
+      raise ConflictingIPFormats(f'not all addresses are valid for suggested IPv6: {addresses=!r}')
   if version == 'IPv4':
     if any(is_ipv6(addr) for addr in addresses.split(',')):
-      raise ValueError(f'not all addresses are valid for IPv4: {addresses=!r}')
+      raise ConflictingIPFormats(f'not all addresses are valid for suggested IPv4: {addresses=!r}')
   assert _canonical_version_is_valid(version)
   return version
 
