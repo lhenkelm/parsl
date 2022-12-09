@@ -7,6 +7,12 @@ VALID_VERSIONS = {'IPv4', 'IPv6'}
 DEFAULT_IP_VERSION = 'IPv6'
 assert DEFAULT_IP_VERSION in VALID_VERSIONS
 
+class ConflictingIPFormats(ValueError):
+  pass
+
+class UnknownIPVersion(ValueError):
+  pass
+
 def is_ipv6(address : str) -> bool:
   return ':' in address
 
@@ -31,12 +37,6 @@ def canonical_version(version : str) -> str:
 
 def is_valid_ip_version(version: str) -> bool:
   return _canonical_version_is_valid(_unchecked_canonical_version(version))
-
-class ConflictingIPFormats(ValueError):
-  pass
-
-class UnknownIPVersion(ValueError):
-  pass
 
 def consistent_ip_version(addresses : str, *, suggest : Optional[str] = None) -> str:
   """
