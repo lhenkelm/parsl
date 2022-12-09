@@ -32,6 +32,12 @@ def canonical_version(version : str) -> str:
 def is_valid_ip_version(version: str) -> bool:
   return _canonical_version_is_valid(_unchecked_canonical_version(version))
 
+class ConflictingIPFormats(ValueError):
+  pass
+
+class UnknownIPVersion(ValueError):
+  pass
+
 def consistent_ip_version(addresses : str, *, suggest : Optional[str] = None) -> str:
   """
   Guess the IP version to use for one or more comma-separated IP addresses,
@@ -43,9 +49,9 @@ def consistent_ip_version(addresses : str, *, suggest : Optional[str] = None) ->
   if suggest:
     version = canonical_version(suggest)
   elif not(maybe_ipv4 or maybe_ipv6):
-    raise ValueError(f'cannot determine IP version from {addresses=!r}, please specify using "suggest" kwarg')
+    raise UnknownIPVersion(f'cannot determine IP version from {addresses=!r}, please specify using "suggest" kwarg')
   elif maybe_ipv4 and maybe_ipv6:
-      raise ValueError(f'cannot determine IP version from {addresses=!r} (conflicting formatsi/versions?)')
+      raise ConflictingIPFormats(f'cannot determine IP version from {addresses=!r} (conflicting formats/versions?)')
   elif maybe_ipv4:
     version = 'IPv4'
   else:
@@ -60,6 +66,17 @@ def consistent_ip_version(addresses : str, *, suggest : Optional[str] = None) ->
       raise ValueError(f'not all addresses are valid for IPv4: {addresses=!r}')
   assert _canonical_version_is_valid(version)
   return version
+
+def ip_version_from_optional(addresses : Sequence[Union[str, None]]) -> str:
+  """
+  Guess an IP version from several adresses, all or some of which may be optional.
+  """
+  combined = ','.join([a for a in addresses if a])
+  if combined:
+    return consistent_ip_version(combined)
+  else:
+    return DEFAULT_IP_VERSION
+
 
 def context(*args, ip_version : str = 'IPv6', **kwargs) -> zqm.Context:
   """
@@ -89,3 +106,21 @@ def any_address(ip_version : str = 'IPv6') -> str:
   else:
     return '0.0.0.0'
   
+def url(protocol : str, address: str, port: Union[int, str], *, ip_version = None) -> str:
+  try:
+    ip_version = consistent_ip_version(address, suggest=ip_version)
+  except UnknownIPVersion: # todo: kinda slow, better to use flow control
+    ip_version = DEFAULT_IP_VERSION
+  
+  # if the address does not contain ':', there is no need to disambiguate
+  if ip_version == 'IPv6' and ':' in address:
+    template = '{protocol}://[{address}]:{port}'
+  else:
+    template = '{protocol}://{address}:{port}'
+  return template.format(protocol=protocol, address=address, port=port)
+
+def tcp_url(*args, **kwargs) -> str:
+  return url('tcp', *args, **kwargs)
+
+def udp_url(*args, **kwargs) -> str:
+  return url('udp', *args, **kwargs)
