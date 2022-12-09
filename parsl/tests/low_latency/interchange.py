@@ -7,16 +7,20 @@ import zmq
 from constants import CLIENT_IP_FILE, INTERCHANGE_IP_FILE
 from parsl.addresses import address_by_interface
 
+import parsl.ipv6 as ipv6
+
 logger = logging.getLogger(__name__)
 
 
-def dealer_interchange(manager_ip="localhost", manager_port=5559,
+def dealer_interchange(manager_ip=None, manager_port=5559,
                        worker_port=5560):
-    context = zmq.Context()
+    ip_version = ipv6.ip_version_from_optional([manager_ip])
+    manager_ip = manager_ip or ipv6.loopback_address(ip_version)
+    context = ipv6.context(ip_version) 
     incoming = context.socket(zmq.ROUTER)
     outgoing = context.socket(zmq.DEALER)
 
-    incoming.connect("tcp://{}:{}".format(manager_ip, manager_port))
+    incoming.connect(ipv6.tcp_url(manager_ip, manager_port))
     outgoing.bind("tcp://*:{}".format(worker_port))
 
     poller = zmq.Poller()
@@ -58,7 +62,7 @@ if __name__ == "__main__":
         print("Wrote IP address {} to file {}"
               .format(interchange_ip, INTERCHANGE_IP_FILE))
     else:
-        client_ip = "localhost"
+        client_ip = ipv6.loopback_address()
 
     interchange = Process(target=dealer_interchange,
                           kwargs={"manager_ip": client_ip,

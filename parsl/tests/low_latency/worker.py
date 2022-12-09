@@ -4,6 +4,8 @@ import logging
 import zmq
 from multiprocessing import Process
 
+import parsl.ipv6 as ipv6
+
 from parsl.serialize import ParslSerializer
 parsl_serializer = ParslSerializer()
 unpack_apply_message = parsl_serializer.unpack_apply_message
@@ -47,10 +49,12 @@ def execute_task(f, args, kwargs, user_ns):
         return user_ns.get(resultname)
 
 
-def dealer_worker(worker_id, ip="localhost", port=5560):
-    context = zmq.Context()
+def dealer_worker(worker_id, ip=None, port=5560):
+    ip_version = ipv6.ip_version_from_optional([ip])
+    ip = ip or ipv6.loopback_address(ip_version)
+    context = ipv6.context(ip_version) 
     socket = context.socket(zmq.REP)
-    socket.connect("tcp://{}:{}".format(ip, port))
+    socket.connect(ipv6.tcp_url(ip, port))
     print("Starting worker {}".format(worker_id))
 
     task_ids_received = []
@@ -94,7 +98,7 @@ if __name__ == "__main__":
         print("Read IP {} from file {}".format(ip, ip_file))
         print("Ping time to IP {}: {} us".format(ip, ping_time(ip)))
     else:
-        ip = "localhost"
+        ip = ipv6.loopback_address()
 
     workers = []
     for i in range(args.num_workers):

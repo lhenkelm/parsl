@@ -6,6 +6,8 @@ from statistics import mean, stdev
 import zmq
 from multiprocessing import Process, Manager
 
+import parsl.ipv6 as ipv6
+
 from parsl.serialize import ParslSerializer
 parsl_serializer = ParslSerializer()
 pack_apply_message = parsl_serializer.pack_apply_message
@@ -63,7 +65,7 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
     exec_times = {}
     results = []
 
-    context = zmq.Context()
+    context = ipv6.context()
     dealer = context.socket(zmq.DEALER)
     dealer.bind("tcp://*:{}".format(port))
 
