@@ -6,6 +6,8 @@ import pickle
 import logging
 import threading
 
+import parsl.ipv6 as ipv6
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +25,8 @@ class CommandClient(object):
            Port range for the comms between client and interchange
 
         """
-        self.context = zmq.Context()
+        self.ip_version = ipv6.consistent_ip_version(ip_address)
+        self.context = ipv6.context(self.ip_version)
         self.ip_address = ip_address
         self.port_range = port_range
         self.port = None
@@ -38,11 +41,11 @@ class CommandClient(object):
         self.zmq_socket = self.context.socket(zmq.REQ)
         self.zmq_socket.setsockopt(zmq.LINGER, 0)
         if self.port is None:
-            self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(self.ip_address),
+            self.port = self.zmq_socket.bind_to_random_port(ipv6.tcp_url(self.ip_address, ip_version=self.ip_version),
                                                             min_port=self.port_range[0],
                                                             max_port=self.port_range[1])
         else:
-            self.zmq_socket.bind("tcp://{}:{}".format(self.ip_address, self.port))
+            self.zmq_socket.bind(ipv6.tcp_url(self.ip_address, self.port, ip_version=self.ip_version))
 
     def run(self, message, max_retries=3):
         """ This function needs to be fast at the same time aware of the possibility of
@@ -64,7 +67,7 @@ class CommandClient(object):
                     logger.info("Trying to reestablish context")
                     self.zmq_socket.close()
                     self.context.destroy()
-                    self.context = zmq.Context()
+                    self.context = ipv6.context(self.ip_version)
                     self.create_socket_and_bind()
                 else:
                     break
@@ -94,10 +97,11 @@ class TasksOutgoing(object):
            Port range for the comms between client and interchange
 
         """
-        self.context = zmq.Context()
+        self.ip_version = ipv6.consistent_ip_version(ip_addresss)
+        self.context = ipv6.context(self.ip_version)
         self.zmq_socket = self.context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
-        self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
+        self.port = self.zmq_socket.bind_to_random_port(ipv6.tcp_url(ip_address, ip_version=self.ip_version),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
         self.poller = zmq.Poller()
@@ -143,10 +147,11 @@ class ResultsIncoming(object):
            Port range for the comms between client and interchange
 
         """
-        self.context = zmq.Context()
+        self.ip_version = ipv6.consistent_ip_version(ip_address)
+        self.context = ipv6.context(self.ip_version)
         self.results_receiver = self.context.socket(zmq.DEALER)
         self.results_receiver.set_hwm(0)
-        self.port = self.results_receiver.bind_to_random_port("tcp://{}".format(ip_address),
+        self.port = self.results_receiver.bind_to_random_port(ipv6.tcp_url(ip_address, ip_version=self.ip_version),
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
 
