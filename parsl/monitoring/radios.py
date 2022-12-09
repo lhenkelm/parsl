@@ -150,6 +150,8 @@ class UDPRadio(MonitoringRadio):
         self.source_id = source_id
         try:
             self.scheme, self.ip, port = ipv6.split_url(monitoring_url)
+            if port is None:
+                raise ValueError(f"failed to parse port from {monitoring_url=!r}")
             self.port = int(port)
         except Exception:
             raise Exception("Failed to parse monitoring url: {}".format(monitoring_url))
