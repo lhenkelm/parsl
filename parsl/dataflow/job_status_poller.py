@@ -5,6 +5,8 @@ import zmq
 from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
+import parsl.ipv6 as ipv6
+
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.dataflow.job_error_handler import JobErrorHandler
 from parsl.dataflow.strategy import Strategy
@@ -30,10 +32,11 @@ class PollItem(ExecutorStatus):
             self.monitoring_enabled = True
             hub_address = self._dfk.hub_address
             hub_port = self._dfk.hub_interchange_port
-            context = zmq.Context()
+            self.ip_version = ipv6.consistent_ip_version(hub_address)
+            context = ipv6.context(self.ip_version)
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
-            self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
+            self.hub_channel.connect(ipv6.tcp_url(hub_address, hub_port))
             logger.info("Monitoring enabled on task status poller")
 
     def _should_poll(self, now: float) -> bool:
