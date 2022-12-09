@@ -25,6 +25,7 @@ from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
+import parsl.ipv6 as ipv6
 
 from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
@@ -233,6 +234,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             self.all_addresses = address
         else:
             self.all_addresses = ','.join(get_all_addresses())
+        self.ip_version = ipv6.consistent_ip_version(all_addresses)
+        
 
         mem_slots = max_workers
         cpu_slots = max_workers
@@ -352,9 +355,18 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def start(self):
         """Create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
-        self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
+        self.outgoing_q = zmq_pipes.TasksOutgoing(
+            ipv6.loopback_address(self.ip_version),
+            self.interchange_port_range,
+        )
+        self.incoming_q = zmq_pipes.ResultsIncoming(
+            ipv6.loopback_address(self.ip_version),
+            self.interchange_port_range,
+        )
+        self.command_client = zmq_pipes.CommandClient(
+            ipv6.loopback_address(self.ip_version),
+            self.interchange_port_range,
+        )
 
         self.is_alive = True
 

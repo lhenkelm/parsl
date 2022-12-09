@@ -17,11 +17,21 @@ except ImportError:
 import struct
 import typeguard
 import psutil
+from functools import lru_cache
 
 from typing import Set, List, Callable
 
+import parsl.ipv6 as ipv6
+
 logger = logging.getLogger(__name__)
 
+@lru_cache
+def address_by_interface_ipv6(*,hostname=None, port=22):
+    if hostname is None:
+        hostname = socket.gethostname()
+    all_the_interfaces = socket.getaddrinfo(hostname, port, socket.AF_INET6)
+    ipv6_address = next(ip for *_,(ip, *_) in all_the_interfaces)
+    return ipv6_address
 
 def address_by_route() -> str:
     """Finds an address for the local host by querying the local routing table
@@ -34,8 +44,14 @@ def address_by_route() -> str:
 
     # original author unknown
     import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
+    if ipv6.DEFAULT_IP_VERSION == 'IPv6':
+      ipv = socket.AF_INET6
+      google_dns_ip = '2001:4860:4860::8888'
+    else:
+      ipv = socket.AF_INET
+      google_dns_ip = '8.8.8.8'
+    s = socket.socket(ipv, socket.SOCK_DGRAM)
+    s.connect((google_dns_ip, 80))
     addr = s.getsockname()[0]
     s.close()
     logger.debug("Address found: {}".format(addr))
@@ -54,10 +70,14 @@ def address_by_query(timeout: float = 30) -> str:
           Timeout for the request in seconds. Default: 30s
     """
     logger.debug("Finding address by querying remote service")
-    response = requests.get('https://api.ipify.org', timeout=timeout)
+    response = requests.get('https://api64.ipify.org', timeout=timeout)
 
     if response.status_code == 200:
-        addr = response.text
+        ipv4_addr, _, ipv6_adr = response.text.partition(' or ')
+        if ipv6.DEFAULT_IP_VERSION == 'IPv6':
+            addr = ipv6_adr
+        else:
+            addr = ip4_adr
         logger.debug("Address found: {}".format(addr))
         return addr
     else:
@@ -112,8 +132,11 @@ def get_all_addresses() -> Set[str]:
         except Exception:
             logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
             pass
-
-    resolution_functions = [address_by_hostname, address_by_route, address_by_query]  # type: List[Callable[[], str]]
+    resolution_functions = [address_by_route, address_by_query]  # type: List[Callable[[], str]]
+    if ipv6.DEFAULT_IP_VERSION == 'IPv6':
+        resolution_functions += [address_by_interface_ipv6]
+    else:
+        resolution_functions += [address_by_hostname]
     for f in resolution_functions:
         try:
             s_addresses.add(f())
