@@ -127,7 +127,7 @@ def url(protocol: str, address: str, port: Union[int, str, None] = None, *, ip_v
     If no port is specified (default), the URL ends at the IP address.
     If a port is specified, it is separated from the IP by a colon (':').
 
-    Specialisations for UDP (udp_url(...)) and TCP (tcp_url(...)) are provided below, 
+    Specialisations for UDP (udp_url(...)) and TCP (tcp_url(...)) are provided below,
     and probably result in more readable code than the generic implementation.
     """
     try:
