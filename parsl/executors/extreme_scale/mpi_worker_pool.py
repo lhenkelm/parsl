@@ -17,6 +17,7 @@ import json
 
 from mpi4py import MPI
 
+import parsl.ipv6 as ipv6
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.serialize import unpack_apply_message, serialize
@@ -39,8 +40,8 @@ class Manager(object):
     """
     def __init__(self,
                  comm, rank,
-                 task_q_url="tcp://127.0.0.1:50097",
-                 result_q_url="tcp://127.0.0.1:50098",
+                 task_q_url=None,
+                 result_q_url=None,
                  max_queue_size=10,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
@@ -61,7 +62,24 @@ class Manager(object):
         """
         self.uid = uid
 
-        self.context = zmq.Context()
+        self.ip_version = ipv6.ip_version_from_urls([task_q_url, result_q_url])
+        task_q_url = (
+            task_q_url 
+            or ipv6.tcp_url(
+                address=ipv6.loopback_address(self.ip_version), 
+                port=50097, 
+                ip_version=self.ip_version,
+            )
+        )
+        result_q_url = (
+            result_q_url 
+            or ipv6.tcp_url(
+                address=ipv6.loopback_address(self.ip_version), 
+                port=50098, 
+                ip_version=self.ip_version,
+            )
+        )
+        self.context = ipv6.context(self.ip_version)
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         # Linger is set to 0, so that the manager can exit even when there might be
