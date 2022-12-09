@@ -143,11 +143,8 @@ class MonitoringHub(RepresentationMixin):
             raise(_db_manager_excepts)
 
         self.hub_address = hub_address
-        _addresses = self.hub_address
-        if client_address:
-          _addresses += f',{client_address}'
-        self.ip_version = ipv6.consistent_ip_version(_addresses)
         
+        self.ip_version = ipv6.ip_version_from_optional([self.hub_address, client_address]) 
         self.client_address = client_address or ipv6.loopback_address(self.ip_version)
         self.client_port_range = client_port_range
 
@@ -229,20 +226,15 @@ class MonitoringHub(RepresentationMixin):
 
         udp_port, ic_port = comm_q_result
 
-        if ipv6.is_ipv6(self.hub_address):
-          self.monitoring_hub_url = "udp://[{}]:{}".format(self.hub_address, udp_port)
-          _dfk_url = "tcp://[{}]:{}".format(self.hub_address, ic_port)
-        else:
-          self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
-          _dfk_url = "tcp://{}:{}".format(self.hub_address, ic_port)
-        
+
+        self.monitoring_hub_url = ipv6.udp_url(self.hub_address, udp_port, ip_version=self.ip_version)
         context = ipv6.context(self.ip_version)
         self.dfk_channel_timeout = 10000  # in milliseconds
         self._dfk_channel = context.socket(zmq.DEALER)
         self._dfk_channel.setsockopt(zmq.LINGER, 0)
         self._dfk_channel.set_hwm(0)
         self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
-        self._dfk_channel.connect(_dfk_url)
+        self._dfk_channel.connect(ipv6.tcp_url(self.hub_address, ic_port, self.ip_version))
 
         self.logger.info("Monitoring Hub initialized")
 
