@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Union, Optional, Sequence
 
 import zmq
 import socket
