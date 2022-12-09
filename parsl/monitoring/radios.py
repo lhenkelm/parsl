@@ -9,6 +9,8 @@ from typing import Optional
 
 from parsl.serialize import serialize
 
+import parsl.ipv6 as ipv6
+
 _db_manager_excepts: Optional[Exception]
 
 
@@ -147,14 +149,14 @@ class UDPRadio(MonitoringRadio):
         self.sock_timeout = timeout
         self.source_id = source_id
         try:
-            self.scheme, self.ip, port = (x.strip('/') for x in monitoring_url.split(':'))
+            self.scheme, self.ip, port = ipv6.split_url(monitoring_url)
             self.port = int(port)
         except Exception:
             raise Exception("Failed to parse monitoring url: {}".format(monitoring_url))
-
-        self.sock = socket.socket(socket.AF_INET,
-                                  socket.SOCK_DGRAM,
-                                  socket.IPPROTO_UDP)  # UDP
+        self.ip_version = ipv6.consistent_ip_version(self.ip)
+        self.sock = ipv6.socket(self.ip_version,
+                                socket.SOCK_DGRAM,
+                                socket.IPPROTO_UDP)  # UDP
         self.sock.settimeout(self.sock_timeout)
 
     def send(self, message: object) -> None:
