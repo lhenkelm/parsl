@@ -55,6 +55,10 @@ def address_by_route() -> str:
     addr = s.getsockname()[0]
     s.close()
     logger.debug("Address found: {}".format(addr))
+    if ipv6.DEFAULT_IP_VERSION == 'IPv6':
+      assert ipv6.is_ipv6(addr), f'{addr=!r}'
+    else:
+      assert ipv6.is_ipv4(addr), f'{addr=!r}'
     return addr
 
 
@@ -74,6 +78,8 @@ def address_by_query(timeout: float = 30) -> str:
 
     if response.status_code == 200:
         ipv4_addr, _, ipv6_addr = response.text.partition(' or ')
+        assert ipv6.is_ipv4(ipv4_addr), f'{ipv4_addr=!r}'
+        assert ipv6.is_ipv6(ipv6_addr), f'{ipv6_addr=!r}'
         if ipv6.DEFAULT_IP_VERSION == 'IPv6':
             addr = ipv6_addr
         else:
@@ -126,17 +132,17 @@ def get_all_addresses() -> Set[str]:
     net_interfaces = psutil.net_if_addrs()
 
     s_addresses = set()
-    for interface in net_interfaces:
-        try:
-            s_addresses.add(address_by_interface(interface))
-        except Exception:
-            logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
-            pass
     resolution_functions = [address_by_route, address_by_query]  # type: List[Callable[[], str]]
     if ipv6.DEFAULT_IP_VERSION == 'IPv6':
         resolution_functions += [address_by_interface_ipv6]
     else:
-        resolution_functions += [address_by_hostname]
+        for interface in net_interfaces:
+            try:
+                s_addresses.add(address_by_interface(interface))
+            except Exception:
+                logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
+                pass
+            resolution_functions += [address_by_hostname]
     for f in resolution_functions:
         try:
             s_addresses.add(f())
