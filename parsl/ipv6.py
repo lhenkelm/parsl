@@ -106,18 +106,32 @@ def any_address(ip_version : str = 'IPv6') -> str:
   else:
     return '0.0.0.0'
   
-def url(protocol : str, address: str, port: Union[int, str], *, ip_version = None) -> str:
+def url(protocol : str, address: str, port: Union[int, str, None] = None, *, ip_version = None) -> str:
+  """
+  Construct a URL, taking care to disambiguate IP address and port if the IP uses IPv6 format.
+    
+  If no port is specified (default), the URL ends at the IP address.
+  If a port is specified, it is separated from the IP by a colon (':').
+  
+  Specialisations for UDP (udp_url(...)) and TCP (tcp_url(...)) are provided below, 
+  and probably result in more readable code than the generic implementation.
+  """
   try:
     ip_version = consistent_ip_version(address, suggest=ip_version)
   except UnknownIPVersion: # todo: kinda slow, better to use flow control
     ip_version = DEFAULT_IP_VERSION
-  
+
+  if port is None:
+    port_str = ''
+  else:
+    port_str = f':{port}'
+
   # if the address does not contain ':', there is no need to disambiguate
   if ip_version == 'IPv6' and ':' in address:
-    template = '{protocol}://[{address}]:{port}'
+    template = '{protocol}://[{address}]{port_str}'
   else:
-    template = '{protocol}://{address}:{port}'
-  return template.format(protocol=protocol, address=address, port=port)
+    template = '{protocol}://{address}{port_str}'
+  return template.format(protocol=protocol, address=address, port_str=port_str)
 
 def tcp_url(*args, **kwargs) -> str:
   return url('tcp', *args, **kwargs)
