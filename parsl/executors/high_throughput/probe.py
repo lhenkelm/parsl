@@ -27,7 +27,7 @@ def probe_addresses(addresses, task_port, timeout=120):
     -------
     None or string address
     """
-    ip_version = ipv6.consistent_ip_version(addresses)
+    ip_version = ipv6.consistent_ip_version(','.join(addresses))
     context = ipv6.context(ip_version)
     addr_map = {}
     for addr in addresses:
