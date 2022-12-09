@@ -138,17 +138,17 @@ class Interchange(object):
         self.poll_period = poll_period
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
-            client_address, client_ports[0], client_ports[1], client_ports[2]))
+            self.client_address, client_ports[0], client_ports[1], client_ports[2]))
         self.context = ipv6.context(self.ip_version)
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.connect(ipv6.tcp_url(client_address, client_ports[0]))
+        self.task_incoming.connect(ipv6.tcp_url(self.client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
-        self.results_outgoing.connect(ipv6.tcp_url(client_address, client_ports[1]))
+        self.results_outgoing.connect(ipv6.tcp_url(self.client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
-        self.command_channel.connect(ipv6.tcp_url(client_address, client_ports[2]))
+        self.command_channel.connect(ipv6.tcp_url(self.client_address, client_ports[2]))
         logger.info("Connected to client")
 
         self.hub_address = hub_address
