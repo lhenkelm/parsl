@@ -1,7 +1,7 @@
 from typing import Union, Optional, Sequence, Tuple
 
 import zmq
-import socket
+import socket as stl_socket
 
 VALID_VERSIONS = {'IPv4', 'IPv6'}
 DEFAULT_IP_VERSION = 'IPv6'
@@ -87,12 +87,12 @@ def context(ip_version : str = 'IPv6', *args, **kwargs) -> zmq.Context:
     context.setsockopt(zmq.IPV6, 1)
   return context
 
-def socket(ip_version: str = 'IPv6', *args, **kwargs) -> socket.socket:
+def socket(ip_version: str = 'IPv6', *args, **kwargs) -> stl_socket.socket:
   if canonical_version(ip_version) == 'IPv6':
-    socket_family = socket.AF_INET6
+    socket_family = stl_socket.AF_INET6
   else:
-    socket_family = socket.AF_INET
-  return socket.socket(socket_family, *args, **kwargs)
+    socket_family = stl_socket.AF_INET
+  return stl_socket.socket(socket_family, *args, **kwargs)
 
 def loopback_address(ip_version : str = 'IPv6') -> str:
   if canonical_version(ip_version) == 'IPv6':
